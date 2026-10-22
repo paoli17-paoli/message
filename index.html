@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bulles — Messagerie</title>
+<style>
+  :root {
+    --bg: #0c0f1b;
+    --panel: #141a2e;
+    --panel-2: #1a2138;
+    --line: #262f4d;
+    --txt: #e9edf9;
+    --muted: #909bc0;
+    --accent: #6c7bff;
+    --accent-2: #8b5cf6;
+    --ok: #22c55e;
+    --danger: #ef4444;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+    color: var(--txt);
+    background: radial-gradient(1200px 700px at 20% -10%, #1b2244, var(--bg)) fixed;
+  }
+  button, input { font: inherit; }
+  button { cursor: pointer; border: none; }
+  .hidden { display: none !important; }
+
+  .center-wrap {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+  }
+  .auth {
+    width: min(420px, 100%);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 28px;
+    box-shadow: 0 30px 80px -30px #000;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+  .brand .logo {
+    width: 40px; height: 40px; border-radius: 12px;
+    display: grid; place-items: center; font-size: 20px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  }
+  .brand h1 { font-size: 22px; margin: 0; letter-spacing: .3px; }
+  .muted { color: var(--muted); }
+  .auth p.sub { margin: 4px 0 22px; font-size: 14px; }
+
+  .tabs { display: flex; gap: 6px; background: #0e1324; padding: 5px; border-radius: 12px; margin-bottom: 20px; }
+  .tabs button {
+    flex: 1; padding: 10px; border-radius: 9px; background: transparent;
+    color: var(--muted); font-weight: 600; transition: .15s;
+  }
+  .tabs button.active { background: var(--panel-2); color: var(--txt); }
+
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 7px; }
+  .field input {
+    width: 100%; padding: 12px 14px; border-radius: 11px;
+    background: #0e1324; border: 1px solid var(--line); color: var(--txt);
+    outline: none; transition: border-color .15s;
+  }
+  .field input:focus { border-color: var(--accent); }
+  .btn {
+    width: 100%; padding: 13px; border-radius: 11px; font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff;
+    transition: filter .15s, transform .05s;
+  }
+  .btn:hover { filter: brightness(1.1); }
+  .btn:active { transform: scale(.99); }
+  .error { min-height: 20px; font-size: 13px; color: var(--danger); margin: 10px 0 2px; }
+  .fine { font-size: 12px; color: var(--muted); margin-top: 16px; line-height: 1.5; }
+
+  .shell {
+    height: 100vh;
+    display: grid;
+    grid-template-columns: 300px 1fr;
+  }
+  .sidebar {
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    display: flex; flex-direction: column; min-height: 0;
+  }
+  .me {
+    display: flex; align-items: center; gap: 12px; padding: 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .avatar {
+    flex: none; width: 38px; height: 38px; border-radius: 50%;
+    display: grid; place-items: center; font-weight: 700; color: #fff; font-size: 14px;
+    text-transform: uppercase;
+  }
+  .me-info { min-width: 0; flex: 1; }
+  .me-info b { display: block; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .me-info span { font-size: 12px; color: var(--ok); }
+  .logout {
+    background: transparent; color: var(--muted); font-size: 12px;
+    padding: 8px 10px; border-radius: 9px; border: 1px solid var(--line);
+  }
+  .logout:hover { color: var(--txt); border-color: var(--danger); }
+
+  .conv-list { overflow-y: auto; padding: 10px; flex: 1; min-height: 0; }
+  .section-title {
+    font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--muted); padding: 12px 8px 8px;
+  }
+  .conv {
+    width: 100%; display: flex; align-items: center; gap: 12px;
+    background: transparent; color: var(--txt); text-align: left;
+    padding: 10px; border-radius: 12px; margin-bottom: 4px; border: 1px solid transparent;
+  }
+  .conv:hover { background: var(--panel-2); }
+  .conv.active { background: var(--panel-2); border-color: var(--line); }
+  .conv-main { min-width: 0; flex: 1; }
+  .conv-title { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .conv-title b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .conv-title time { font-size: 11px; color: var(--muted); flex: none; }
+  .conv-preview {
+    font-size: 12px; color: var(--muted); margin-top: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .badge {
+    flex: none; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 99px;
+    background: var(--accent); color: #fff; font-size: 11px; font-weight: 700;
+    display: grid; place-items: center;
+  }
+  .empty-list { font-size: 13px; color: var(--muted); padding: 8px; line-height: 1.5; }
+
+  .chat { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: #0b0f1c; }
+  .chat-head {
+    display: flex; align-items: center; gap: 12px; padding: 14px 18px;
+    border-bottom: 1px solid var(--line); background: var(--panel);
+  }
+  .chat-head h2 { font-size: 16px; margin: 0; }
+  .chat-head .status { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .back { display: none; background: transparent; color: var(--txt); font-size: 20px; padding: 4px 8px; }
+
+  .messages {
+    flex: 1; overflow-y: auto; padding: 20px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .empty-chat {
+    margin: auto; text-align: center; color: var(--muted); font-size: 14px;
+    max-width: 320px; line-height: 1.6;
+  }
+  .empty-chat .big { font-size: 40px; margin-bottom: 10px; }
+  .msg { max-width: min(70%, 560px); display: flex; flex-direction: column; gap: 3px; }
+  .msg .bubble {
+    padding: 10px 13px; border-radius: 14px; background: var(--panel-2);
+    border: 1px solid var(--line); font-size: 14px; line-height: 1.45;
+    white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+  .msg .meta { font-size: 10px; color: var(--muted); padding: 0 4px; }
+  .msg.mine { align-self: flex-end; align-items: flex-end; }
+  .msg.mine .bubble {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    border-color: transparent;
+  }
+  .msg.mine .meta { text-align: right; }
+  .msg .who { font-size: 11px; color: var(--muted); padding: 0 4px; }
+
+  @keyframes riseIn {
+    0% { opacity: 0; transform: translateY(var(--rise, 24px)) scale(.97); }
+    70% { opacity: 1; transform: translateY(-4px) scale(1.01); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .msg.drop { animation: riseIn .6s cubic-bezier(.22, .75, .25, 1) both; }
+  .messages > .msg:first-child { margin-top: auto; }
+
+  .composer {
+    display: flex; gap: 10px; padding: 14px; border-top: 1px solid var(--line);
+    background: var(--panel);
+  }
+  .composer input {
+    flex: 1; padding: 13px 16px; border-radius: 99px;
+    background: #0e1324; border: 1px solid var(--line); color: var(--txt); outline: none;
+  }
+  .composer input:focus { border-color: var(--accent); }
+  .composer button {
+    padding: 0 22px; border-radius: 99px; font-weight: 700; color: #fff;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  }
+  .composer button:hover { filter: brightness(1.1); }
+
+  @media (max-width: 760px) {
+    .shell { grid-template-columns: 1fr; }
+    .shell .chat { display: none; }
+    .shell.chat-open .sidebar { display: none; }
+    .shell.chat-open .chat { display: flex; }
+    .back { display: block; }
+    .msg { max-width: 85%; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+  const KEYS = {
+    users: "bulles_users",
+    session: "bulles_session",
+    messages: "bulles_messages",
+    reads: "bulles_reads_"
+  };
+
+  const app = document.getElementById("app");
+  let me = null;
+  let activeConv = "_global";
+  let activeName = "Salon général";
+  let lastSignature = "";
+  let renderedConv = null;
+  const seenMessages = new Set();
+
+  const readJson = (key, fallback) => {
+    try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
+    catch { return fallback; }
+  };
+  const writeJson = (key, value) => localStorage.setItem(key, JSON.stringify(value));
+
+  const getUsers = () => readJson(KEYS.users, {});
+  const saveUsers = (u) => writeJson(KEYS.users, u);
+  const getMessages = () => readJson(KEYS.messages, []);
+  const saveMessages = (m) => writeJson(KEYS.messages, m);
+  const sessionName = () => sessionStorage.getItem(KEYS.session);
+  const readsKey = (key) => KEYS.reads + key;
+  const getReads = () => readJson(readsKey(me.key), {});
+  const saveReads = (r) => writeJson(readsKey(me.key), r);
+
+  async function hashPassword(name, password) {
+    const raw = `bulles|${name}|${password}`;
+    if (window.crypto && crypto.subtle) {
+      const data = new TextEncoder().encode(raw);
+      const buf = await crypto.subtle.digest("SHA-256", data);
+      return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+    }
+    let h = 0;
+    for (let i = 0; i < raw.length; i++) h = (h * 31 + raw.charCodeAt(i)) | 0;
+    return "fallback_" + Math.abs(h).toString(16);
+  }
+
+  function hueFor(name) {
+    let h = 0;
+    for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
+    return h;
+  }
+  function avatarStyle(name) {
+    const h = hueFor(name);
+    return `background:linear-gradient(135deg,hsl(${h} 70% 52%),hsl(${(h + 45) % 360} 70% 45%))`;
+  }
+  function initials(name) {
+    return name.trim().slice(0, 2).replace(/\s+/g, "");
+  }
+  function avatarHtml(name, size = 38) {
+    return `<span class="avatar" style="width:${size}px;height:${size}px;${avatarStyle(name)}">${escapeHtml(initials(name))}</span>`;
+  }
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[c]));
+  }
+  function convId(from, to) {
+    if (to === "_global") return "_global";
+    return [from.toLowerCase(), to.toLowerCase()].sort().join("|");
+  }
+  function messagesOf(id) {
+    return getMessages().filter((m) => convId(m.from, m.to) === id);
+  }
+  function lastMessageOf(id) {
+    const list = messagesOf(id);
+    return list.length ? list[list.length - 1] : null;
+  }
+  function unreadOf(id) {
+    const lastRead = getReads()[id] || 0;
+    return messagesOf(id).filter((m) => m.ts > lastRead && m.from.toLowerCase() !== me.key).length;
+  }
+  function markRead(id) {
+    const reads = getReads();
+    reads[id] = Date.now();
+    saveReads(reads);
+  }
+  function fmtTime(ts) {
+    const d = new Date(ts);
+    const today = new Date();
+    const sameDay = d.toDateString() === today.toDateString();
+    return sameDay
+      ? d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
+      : d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
+  }
+
+  function renderAuth() {
+    me = null;
+    app.innerHTML = `
+      <div class="center-wrap">
+        <div class="auth">
+          <div class="brand">
+            <div class="logo">💬</div>
+            <h1>Bulles</h1>
+          </div>
+          <p class="sub muted">Discute avec les autres comptes de ce navigateur.</p>
+          <div class="tabs">
+            <button data-mode="login" class="active" id="tab-login">Connexion</button>
+            <button data-mode="register" id="tab-register">Inscription</button>
+          </div>
+          <form id="auth-form" autocomplete="off">
+            <div class="field">
+              <label for="name">Pseudo</label>
+              <input id="name" name="name" maxlength="20" placeholder="ex : sofia" required>
+            </div>
+            <div class="field">
+              <label for="password">Mot de passe</label>
+              <input id="password" name="password" type="password" minlength="4" placeholder="4 caractères minimum" required>
+            </div>
+            <div class="error" id="auth-error"></div>
+            <button class="btn" type="submit" id="auth-submit">Se connecter</button>
+          </form>
+          <p class="fine">Démo locale : les comptes et messages restent dans ce navigateur. Ouvre deux onglets pour discuter avec toi-même.</p>
+        </div>
+      </div>
+    `;
+
+    let mode = "login";
+    const form = document.getElementById("auth-form");
+    const error = document.getElementById("auth-error");
+    const submit = document.getElementById("auth-submit");
+    const tabLogin = document.getElementById("tab-login");
+    const tabRegister = document.getElementById("tab-register");
+
+    const setMode = (next) => {
+      mode = next;
+      tabLogin.classList.toggle("active", mode === "login");
+      tabRegister.classList.toggle("active", mode === "register");
+      submit.textContent = mode === "login" ? "Se connecter" : "Créer mon compte";
+      error.textContent = "";
+    };
+
+    tabLogin.addEventListener("click", () => setMode("login"));
+    tabRegister.addEventListener("click", () => setMode("register"));
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const nameValue = form.name.value.trim();
+      const password = form.password.value;
+      if (nameValue.length < 2) { error.textContent = "Le pseudo doit faire au moins 2 caractères."; return; }
+      if (password.length < 4) { error.textContent = "Le mot de passe doit faire au moins 4 caractères."; return; }
+
+      const key = nameValue.toLowerCase();
+      const users = getUsers();
+      const hash = await hashPassword(key, password);
+
+      if (mode === "register") {
+        if (users[key]) { error.textContent = "Ce pseudo est déjà pris."; return; }
+        users[key] = { key, name: nameValue, hash, created: Date.now() };
+        saveUsers(users);
+      } else {
+        if (!users[key]) { error.textContent = "Aucun compte avec ce pseudo."; return; }
+        if (users[key].hash !== hash) { error.textContent = "Mot de passe incorrect."; return; }
+      }
+
+      sessionStorage.setItem(KEYS.session, key);
+      me = getUsers()[key];
+      activeConv = "_global";
+      activeName = "Salon général";
+      renderApp();
+    });
+  }
+
+  function renderApp() {
+    me = getUsers()[sessionName()];
+    if (!me) { renderAuth(); return; }
+
+    app.innerHTML = `
+      <div class="shell" id="shell">
+        <aside class="sidebar">
+          <div class="me">
+            ${avatarHtml(me.name)}
+            <div class="me-info">
+              <b>${escapeHtml(me.name)}</b>
+              <span>En ligne</span>
+            </div>
+            <button class="logout" id="logout">Quitter</button>
+          </div>
+          <div class="conv-list">
+            <div class="section-title">Salons</div>
+            <button class="conv" id="conv-global">
+              <span class="avatar" style="width:38px;height:38px;background:linear-gradient(135deg,#6c7bff,#8b5cf6)">#</span>
+              <span class="conv-main">
+                <span class="conv-title"><b>Salon général</b><time id="global-time"></time></span>
+                <span class="conv-preview" id="global-preview">Tout le monde peut écrire ici</span>
+              </span>
+              <span class="badge hidden" id="global-badge">0</span>
+            </button>
+            <div class="section-title">Contacts</div>
+            <div id="contacts"></div>
+          </div>
+        </aside>
+        <section class="chat">
+          <header class="chat-head">
+            <button class="back" id="back">←</button>
+            ${avatarHtml(activeName, 36)}
+            <div>
+              <h2 id="chat-title">${escapeHtml(activeName)}</h2>
+              <div class="status" id="chat-status">${activeConv === "_global" ? "Salon public" : "Message privé"}</div>
+            </div>
+          </header>
+          <div class="messages" id="messages"></div>
+          <form class="composer" id="composer" autocomplete="off">
+            <input id="draft" maxlength="1000" placeholder="Écris un message…">
+            <button type="submit">Envoyer</button>
+          </form>
+        </section>
+      </div>
+    `;
+
+    document.getElementById("logout").addEventListener("click", () => {
+      sessionStorage.removeItem(KEYS.session);
+      renderAuth();
+    });
+    document.getElementById("back").addEventListener("click", () => {
+      document.getElementById("shell").classList.remove("chat-open");
+    });
+    document.getElementById("conv-global").addEventListener("click", () => selectConv("_global", "Salon général"));
+    document.getElementById("composer").addEventListener("submit", (e) => {
+      e.preventDefault();
+      sendMessage();
+    });
+
+    renderContacts();
+    renderCurrent();
+    document.getElementById("draft").focus();
+  }
+
+  function renderContacts() {
+    if (!me) return;
+    const contacts = document.getElementById("contacts");
+    if (!contacts) return;
+
+    const users = Object.values(getUsers()).filter((u) => u.key !== me.key);
+    users.sort((a, b) => a.name.localeCompare(b.name));
+
+    if (!users.length) {
+      contacts.innerHTML = `<p class="empty-list">Aucun autre compte pour l'instant. Crée-en un deuxième depuis un autre onglet.</p>`;
+    } else {
+      contacts.innerHTML = users.map((u) => {
+        const id = convId(me.name, u.name);
+        const last = lastMessageOf(id);
+        const unread = unreadOf(id);
+        const preview = last
+          ? `${last.from.toLowerCase() === me.key ? "Vous : " : ""}${last.text}`
+          : "Démarrer la conversation";
+        return `
+          <button class="conv ${activeConv === id ? "active" : ""}" data-conv="${escapeHtml(id)}" data-name="${escapeHtml(u.name)}">
+            ${avatarHtml(u.name)}
+            <span class="conv-main">
+              <span class="conv-title"><b>${escapeHtml(u.name)}</b><time>${last ? fmtTime(last.ts) : ""}</time></span>
+              <span class="conv-preview">${escapeHtml(preview)}</span>
+            </span>
+            ${unread ? `<span class="badge">${unread}</span>` : ""}
+          </button>
+        `;
+      }).join("");
+      contacts.querySelectorAll(".conv").forEach((el) => {
+        el.addEventListener("click", () => selectConv(el.dataset.conv, el.dataset.name));
+      });
+    }
+
+    const globalLast = lastMessageOf("_global");
+    const globalPreview = document.getElementById("global-preview");
+    const globalTime = document.getElementById("global-time");
+    const globalBadge = document.getElementById("global-badge");
+    if (globalPreview) {
+      globalPreview.textContent = globalLast
+        ? `${globalLast.from.toLowerCase() === me.key ? "Vous : " : globalLast.from + " : "}${globalLast.text}`
+        : "Tout le monde peut écrire ici";
+    }
+    if (globalTime) globalTime.textContent = globalLast ? fmtTime(globalLast.ts) : "";
+    if (globalBadge) {
+      const n = unreadOf("_global");
+      globalBadge.textContent = String(n);
+      globalBadge.classList.toggle("hidden", n === 0);
+    }
+
+    const globalBtn = document.getElementById("conv-global");
+    if (globalBtn) globalBtn.classList.toggle("active", activeConv === "_global");
+  }
+
+  function selectConv(id, name) {
+    activeConv = id;
+    activeName = name;
+    markRead(id);
+    const title = document.getElementById("chat-title");
+    const status = document.getElementById("chat-status");
+    const head = document.querySelector(".chat-head");
+    if (title) title.textContent = name;
+    if (status) status.textContent = id === "_global" ? "Salon public" : "Message privé";
+    if (head) {
+      const av = head.querySelector(".avatar");
+      if (av) {
+        av.style.cssText = `width:36px;height:36px;${avatarStyle(name)}`;
+        av.textContent = id === "_global" ? "#" : initials(name);
+      }
+    }
+    document.getElementById("shell").classList.add("chat-open");
+    renderCurrent();
+    renderContacts();
+    document.getElementById("draft").focus();
+  }
+
+  function renderCurrent() {
+    const box = document.getElementById("messages");
+    if (!me || !box) return;
+    const list = messagesOf(activeConv);
+    const firstView = renderedConv !== activeConv;
+    if (firstView) {
+      renderedConv = activeConv;
+      seenMessages.clear();
+      list.forEach((m) => seenMessages.add(m.id));
+    }
+
+    if (!list.length) {
+      box.innerHTML = `
+        <div class="empty-chat">
+          <div class="big">${activeConv === "_global" ? "🌍" : "👋"}</div>
+          ${activeConv === "_global"
+            ? "Personne n'a encore parlé ici. Lance la conversation !"
+            : `Aucun message avec ${escapeHtml(activeName)}. Dis bonjour !`}
+        </div>
+      `;
+      return;
+    }
+
+    let dropIndex = 0;
+    const ordered = list.slice().reverse();
+    box.innerHTML = ordered.map((m) => {
+      const mine = m.from.toLowerCase() === me.key;
+      const showWho = activeConv === "_global" && !mine;
+      const isNew = !seenMessages.has(m.id);
+      if (isNew) seenMessages.add(m.id);
+      const delay = isNew ? Math.min(dropIndex++ * 70, 280) : 0;
+      return `
+        <div class="msg ${mine ? "mine" : ""}" data-new="${isNew ? 1 : 0}" data-delay="${delay}">
+          ${showWho ? `<span class="who">${escapeHtml(m.from)}</span>` : ""}
+          <div class="bubble"></div>
+          <span class="meta">${fmtTime(m.ts)}</span>
+        </div>
+      `;
+    }).join("");
+
+    const bubbles = box.querySelectorAll(".bubble");
+    ordered.forEach((m, i) => { bubbles[i].textContent = m.text; });
+    box.scrollTop = 0;
+
+    const boxRect = box.getBoundingClientRect();
+    box.querySelectorAll('[data-new="1"]').forEach((el) => {
+      const r = el.getBoundingClientRect();
+      const distance = Math.max(24, boxRect.bottom - r.top - r.height);
+      el.style.setProperty("--rise", `${distance}px`);
+      el.style.animationDuration = `${Math.min(0.85, 0.4 + distance / 1400)}s`;
+      el.style.animationDelay = `${el.dataset.delay}ms`;
+      el.classList.add("drop");
+    });
+  }
+
+  function sendMessage() {
+    const input = document.getElementById("draft");
+    if (!input || !me) return;
+    const text = input.value.trim();
+    if (!text) return;
+
+    const to = activeConv === "_global" ? "_global" : activeName;
+    const messages = getMessages();
+    messages.push({ id: Date.now() + "-" + Math.random().toString(36).slice(2), from: me.name, to, text, ts: Date.now() });
+    saveMessages(messages);
+    markRead(activeConv);
+    input.value = "";
+    renderCurrent();
+    renderContacts();
+    input.focus();
+  }
+
+  function refreshFromStorage(key) {
+    if (!me) return;
+    if (key === KEYS.users) {
+      renderContacts();
+      return;
+    }
+    if (key === KEYS.messages) {
+      if (activeConv) markRead(activeConv);
+      renderCurrent();
+      renderContacts();
+    }
+  }
+
+  window.addEventListener("storage", (e) => {
+    if (!e.key) return;
+    if (e.key.startsWith("bulles_")) refreshFromStorage(e.key);
+  });
+
+  const legacySession = localStorage.getItem(KEYS.session);
+  if (legacySession && !sessionStorage.getItem(KEYS.session)) {
+    sessionStorage.setItem(KEYS.session, legacySession);
+  }
+  localStorage.removeItem(KEYS.session);
+
+  if (sessionName() && getUsers()[sessionName()]) renderApp();
+  else renderAuth();
+</script>
+</body>
+</html>
